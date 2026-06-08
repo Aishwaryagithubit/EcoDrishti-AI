@@ -1,0 +1,2 @@
+- [Auth token setup](auth-token-setup.md) — setAuthTokenGetter must be called in AuthContext on every token change or all API requests return 401
+- [DB column naming gotchas](db-columns.md) — schema columns differ from OpenAPI names; see file for key differences

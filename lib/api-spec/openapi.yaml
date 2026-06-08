@@ -1,22 +1,37 @@
 openapi: 3.1.0
 info:
-  # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: EcoDrishti AI API - Nepal School Climate Intelligence Platform
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: auth
+    description: Authentication operations
+  - name: dashboard
+    description: Dashboard data
+  - name: carbon
+    description: Carbon calculator
+  - name: reports
+    description: Monthly reports
+  - name: community
+    description: Community sharing hub
+  - name: challenges
+    description: Eco challenges
+  - name: league
+    description: Inter-School Eco League
+  - name: recommendations
+    description: AI recommendations
+
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,13 +39,861 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /auth/register:
+    post:
+      operationId: register
+      tags: [auth]
+      summary: Register a new user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RegisterInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "400":
+          description: Bad request
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login a user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthResponse"
+        "401":
+          description: Unauthorized
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout the current user
+      responses:
+        "200":
+          description: OK
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Unauthorized
+
+  /dashboard/summary:
+    get:
+      operationId: getDashboardSummary
+      tags: [dashboard]
+      summary: Get dashboard summary stats
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardSummary"
+
+  /dashboard/emissions-trend:
+    get:
+      operationId: getEmissionsTrend
+      tags: [dashboard]
+      summary: Get monthly emissions trend for charts
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/EmissionTrendPoint"
+
+  /dashboard/category-breakdown:
+    get:
+      operationId: getCategoryBreakdown
+      tags: [dashboard]
+      summary: Get emissions by category breakdown
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CategoryBreakdown"
+
+  /carbon/submissions:
+    get:
+      operationId: getCarbonSubmissions
+      tags: [carbon]
+      summary: List carbon data submissions
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CarbonSubmission"
+    post:
+      operationId: submitCarbonData
+      tags: [carbon]
+      summary: Submit carbon calculator data
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CarbonDataInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CarbonSubmission"
+
+  /carbon/submissions/{id}:
+    get:
+      operationId: getCarbonSubmission
+      tags: [carbon]
+      summary: Get a specific carbon submission
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CarbonSubmission"
+
+  /recommendations:
+    get:
+      operationId: getRecommendations
+      tags: [recommendations]
+      summary: Get AI recommendations for the school
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Recommendation"
+
+  /recommendations/generate:
+    post:
+      operationId: generateRecommendations
+      tags: [recommendations]
+      summary: Generate new AI recommendations based on latest carbon data
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecommendationRequest"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Recommendation"
+
+  /reports:
+    get:
+      operationId: getReports
+      tags: [reports]
+      summary: List monthly reports
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/MonthlyReport"
+
+  /reports/{id}:
+    get:
+      operationId: getReport
+      tags: [reports]
+      summary: Get a specific monthly report
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MonthlyReport"
+
+  /reports/generate:
+    post:
+      operationId: generateReport
+      tags: [reports]
+      summary: Generate a monthly report
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ReportGenerateInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MonthlyReport"
+
+  /community/posts:
+    get:
+      operationId: getCommunityPosts
+      tags: [community]
+      summary: List community posts/shares
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CommunityPost"
+    post:
+      operationId: createCommunityPost
+      tags: [community]
+      summary: Create a community post or resource share
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CommunityPostInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommunityPost"
+
+  /community/posts/{id}/like:
+    post:
+      operationId: likeCommunityPost
+      tags: [community]
+      summary: Like a community post
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommunityPost"
+
+  /community/resources:
+    get:
+      operationId: getCommunityResources
+      tags: [community]
+      summary: List shared resources (books, tools, etc.)
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/SharedResource"
+    post:
+      operationId: shareResource
+      tags: [community]
+      summary: Share a resource for exchange
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SharedResourceInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SharedResource"
+
+  /challenges:
+    get:
+      operationId: getChallenges
+      tags: [challenges]
+      summary: List active eco challenges
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Challenge"
+
+  /challenges/{id}/join:
+    post:
+      operationId: joinChallenge
+      tags: [challenges]
+      summary: Join an eco challenge
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Challenge"
+
+  /challenges/{id}/complete:
+    post:
+      operationId: completeChallenge
+      tags: [challenges]
+      summary: Mark a challenge as completed
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Challenge"
+
+  /league/rankings:
+    get:
+      operationId: getLeagueRankings
+      tags: [league]
+      summary: Get Inter-School Eco League rankings
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/LeagueSchool"
+
+  /league/my-school:
+    get:
+      operationId: getMySchoolLeagueStats
+      tags: [league]
+      summary: Get current school league stats and position
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LeagueSchool"
+
 components:
   schemas:
     HealthStatus:
       type: object
+      required: [status]
       properties:
         status:
           type: string
-      required:
-        - status
 
+    RegisterInput:
+      type: object
+      required: [name, email, password, schoolName, role]
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+          minLength: 6
+        schoolName:
+          type: string
+        role:
+          type: string
+          enum: [admin, teacher, student]
+
+    LoginInput:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+
+    User:
+      type: object
+      required: [id, name, email, schoolName, role, ecoPoints]
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        schoolName:
+          type: string
+        role:
+          type: string
+        ecoPoints:
+          type: integer
+        badge:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    AuthResponse:
+      type: object
+      required: [user, token]
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        token:
+          type: string
+
+    DashboardSummary:
+      type: object
+      required: [totalEmissionsKg, sustainabilityScore, activeStudents, challengesCompleted, carbonReductionPercent, dataConfidenceScore, ecoLeagueRank, totalSchools]
+      properties:
+        totalEmissionsKg:
+          type: number
+        sustainabilityScore:
+          type: number
+        activeStudents:
+          type: integer
+        challengesCompleted:
+          type: integer
+        carbonReductionPercent:
+          type: number
+        dataConfidenceScore:
+          type: number
+        ecoLeagueRank:
+          type: integer
+        totalSchools:
+          type: integer
+        transportEmissionsKg:
+          type: number
+        electricityEmissionsKg:
+          type: number
+        waterEmissionsKg:
+          type: number
+        wasteEmissionsKg:
+          type: number
+
+    EmissionTrendPoint:
+      type: object
+      required: [month, year, totalKg, transportKg, electricityKg, waterKg, wasteKg]
+      properties:
+        month:
+          type: string
+        year:
+          type: integer
+        totalKg:
+          type: number
+        transportKg:
+          type: number
+        electricityKg:
+          type: number
+        waterKg:
+          type: number
+        wasteKg:
+          type: number
+
+    CategoryBreakdown:
+      type: object
+      required: [category, emissionsKg, percentage, color]
+      properties:
+        category:
+          type: string
+        emissionsKg:
+          type: number
+        percentage:
+          type: number
+        color:
+          type: string
+
+    CarbonDataInput:
+      type: object
+      required: [month, year, studentCount, staffCount]
+      properties:
+        month:
+          type: integer
+        year:
+          type: integer
+        studentCount:
+          type: integer
+        staffCount:
+          type: integer
+        electricityKwh:
+          type: ["number", "null"]
+        classroomCount:
+          type: ["integer", "null"]
+        lightCount:
+          type: ["integer", "null"]
+        fanCount:
+          type: ["integer", "null"]
+        hasComputerLab:
+          type: ["boolean", "null"]
+        waterLiters:
+          type: ["number", "null"]
+        wasteKg:
+          type: ["number", "null"]
+        recyclingKg:
+          type: ["number", "null"]
+        compostingKg:
+          type: ["number", "null"]
+        busRiders:
+          type: ["integer", "null"]
+        walkersOrCyclers:
+          type: ["integer", "null"]
+        carRiders:
+          type: ["integer", "null"]
+        fuelLiters:
+          type: ["number", "null"]
+        notes:
+          type: ["string", "null"]
+
+    CarbonSubmission:
+      type: object
+      required: [id, month, year, totalEmissionsKg, transportEmissionsKg, electricityEmissionsKg, waterEmissionsKg, wasteEmissionsKg, sustainabilityScore, dataConfidenceScore, status, createdAt]
+      properties:
+        id:
+          type: integer
+        month:
+          type: integer
+        year:
+          type: integer
+        totalEmissionsKg:
+          type: number
+        transportEmissionsKg:
+          type: number
+        electricityEmissionsKg:
+          type: number
+        waterEmissionsKg:
+          type: number
+        wasteEmissionsKg:
+          type: number
+        sustainabilityScore:
+          type: number
+        dataConfidenceScore:
+          type: number
+        status:
+          type: string
+          enum: [pending, verified, flagged]
+        notes:
+          type: ["string", "null"]
+        studentCount:
+          type: integer
+        staffCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    Recommendation:
+      type: object
+      required: [id, category, title, titleNp, description, descriptionNp, estimatedCarbonReductionKg, difficulty, impact, timeline, status]
+      properties:
+        id:
+          type: integer
+        category:
+          type: string
+          enum: [transport, electricity, water, waste, general]
+        title:
+          type: string
+        titleNp:
+          type: string
+        description:
+          type: string
+        descriptionNp:
+          type: string
+        estimatedCarbonReductionKg:
+          type: number
+        difficulty:
+          type: string
+          enum: [easy, medium, hard]
+        impact:
+          type: string
+          enum: [low, medium, high]
+        timeline:
+          type: string
+        status:
+          type: string
+          enum: [active, completed, dismissed]
+        createdAt:
+          type: string
+          format: date-time
+
+    RecommendationRequest:
+      type: object
+      required: [submissionId]
+      properties:
+        submissionId:
+          type: integer
+
+    MonthlyReport:
+      type: object
+      required: [id, month, year, totalEmissionsKg, sustainabilityScore, ecoLeagueRank, highlights, createdAt]
+      properties:
+        id:
+          type: integer
+        month:
+          type: integer
+        year:
+          type: integer
+        totalEmissionsKg:
+          type: number
+        sustainabilityScore:
+          type: number
+        dataConfidenceScore:
+          type: number
+        ecoLeagueRank:
+          type: integer
+        highlights:
+          type: array
+          items:
+            type: string
+        challengesCompleted:
+          type: integer
+        activeStudents:
+          type: integer
+        carbonReductionPercent:
+          type: number
+        transportEmissionsKg:
+          type: number
+        electricityEmissionsKg:
+          type: number
+        waterEmissionsKg:
+          type: number
+        wasteEmissionsKg:
+          type: number
+        createdAt:
+          type: string
+          format: date-time
+
+    ReportGenerateInput:
+      type: object
+      required: [month, year]
+      properties:
+        month:
+          type: integer
+        year:
+          type: integer
+
+    CommunityPost:
+      type: object
+      required: [id, authorName, authorRole, content, category, likes, createdAt]
+      properties:
+        id:
+          type: integer
+        authorName:
+          type: string
+        authorRole:
+          type: string
+        content:
+          type: string
+        category:
+          type: string
+          enum: [achievement, tip, awareness, question, celebration]
+        likes:
+          type: integer
+        imageUrl:
+          type: ["string", "null"]
+        ecoPointsEarned:
+          type: ["integer", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    CommunityPostInput:
+      type: object
+      required: [content, category]
+      properties:
+        content:
+          type: string
+        category:
+          type: string
+          enum: [achievement, tip, awareness, question, celebration]
+        imageUrl:
+          type: ["string", "null"]
+
+    SharedResource:
+      type: object
+      required: [id, title, description, resourceType, condition, donorName, available, createdAt]
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        description:
+          type: string
+        resourceType:
+          type: string
+          enum: [reference_book, story_book, exam_material, educational_tool, lab_equipment, learning_aid, other]
+        condition:
+          type: string
+          enum: [excellent, good, fair]
+        donorName:
+          type: string
+        available:
+          type: boolean
+        requestedBy:
+          type: ["string", "null"]
+        createdAt:
+          type: string
+          format: date-time
+
+    SharedResourceInput:
+      type: object
+      required: [title, description, resourceType, condition]
+      properties:
+        title:
+          type: string
+        description:
+          type: string
+        resourceType:
+          type: string
+          enum: [reference_book, story_book, exam_material, educational_tool, lab_equipment, learning_aid, other]
+        condition:
+          type: string
+          enum: [excellent, good, fair]
+
+    Challenge:
+      type: object
+      required: [id, title, titleNp, description, descriptionNp, category, durationDays, ecoPointsReward, participantCount, co2AvoidedKg, status, startDate, endDate]
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        titleNp:
+          type: string
+        description:
+          type: string
+        descriptionNp:
+          type: string
+        category:
+          type: string
+          enum: [transport, energy, waste, water, biodiversity, general]
+        durationDays:
+          type: integer
+        ecoPointsReward:
+          type: integer
+        participantCount:
+          type: integer
+        co2AvoidedKg:
+          type: number
+        status:
+          type: string
+          enum: [active, upcoming, completed]
+        isJoined:
+          type: ["boolean", "null"]
+        isCompleted:
+          type: ["boolean", "null"]
+        startDate:
+          type: string
+          format: date-time
+        endDate:
+          type: string
+          format: date-time
+
+    LeagueSchool:
+      type: object
+      required: [id, schoolName, rank, sustainabilityScore, carbonReductionPercent, participationRate, challengeCompletionRate, dataConfidenceScore, tier, schoolType, location]
+      properties:
+        id:
+          type: integer
+        schoolName:
+          type: string
+        rank:
+          type: integer
+        sustainabilityScore:
+          type: number
+        carbonReductionPercent:
+          type: number
+        participationRate:
+          type: number
+        challengeCompletionRate:
+          type: number
+        dataConfidenceScore:
+          type: number
+        tier:
+          type: string
+          enum: [Climate Starter, Climate Achiever, Climate Leader, Climate Champion]
+        schoolType:
+          type: string
+          enum: [government, community, private]
+        location:
+          type: string
+        isCurrentSchool:
+          type: ["boolean", "null"]

@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "EcoDrishti AI"
+version = "1.0.0"
+id = "artifacts/ecodrishti"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 19946
+
+[services.development]
+run = "pnpm --filter @workspace/ecodrishti run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/ecodrishti", "run", "build" ]
+publicDir = "artifacts/ecodrishti/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "19946"
+BASE_PATH = "/"
