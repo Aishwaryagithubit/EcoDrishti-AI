@@ -15,6 +15,7 @@ import ReportsPage from "@/pages/ReportsPage";
 import CommunityPage from "@/pages/CommunityPage";
 import ChallengesPage from "@/pages/ChallengesPage";
 import LeaguePage from "@/pages/LeaguePage";
+import OffsetEmissionsPage from "@/pages/OffsetEmissionsPage";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -56,6 +57,7 @@ function Router() {
       <Route path="/register" component={() => <PublicRoute component={RegisterPage} />} />
       <Route path="/dashboard" component={() => <ProtectedRoute component={DashboardPage} />} />
       <Route path="/carbon-calculator" component={() => <ProtectedRoute component={CarbonCalculatorPage} />} />
+      <Route path="/offset-emissions" component={() => <ProtectedRoute component={OffsetEmissionsPage} />} />
       <Route path="/reports" component={() => <ProtectedRoute component={ReportsPage} />} />
       <Route path="/community" component={() => <ProtectedRoute component={CommunityPage} />} />
       <Route path="/challenges" component={() => <ProtectedRoute component={ChallengesPage} />} />

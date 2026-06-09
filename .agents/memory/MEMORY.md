@@ -1,2 +1,7 @@
 - [Auth token setup](auth-token-setup.md) — setAuthTokenGetter must be called in AuthContext on every token change or all API requests return 401
 - [DB column naming gotchas](db-columns.md) — schema columns differ from OpenAPI names; see file for key differences
+- [Sidebar full-height fix](sidebar-layout.md) — use `h-screen overflow-hidden` on outer wrapper; sidebar gets `h-screen` fixed + `h-full` static; main gets `overflow-y-auto`.
+- [Nepali digit utility](nepali-utility.md) — `lib/nepali.ts` has `npNum(n, lang)` and `npFixed(n, dec, lang)`; import from `@/lib/nepali` in every page showing numbers in NP.
+- [Dummy data fallback pattern](dummy-data-pattern.md) — use `const data = (apiData && apiData.length > 0) ? apiData : DUMMY_*` so pages never show empty on first load.
+- [Work plan modal pattern](work-plan-modal.md) — AI rec click opens Dialog with 4-week plan generated client-side by `generateWorkPlan(rec, lang)`; no extra API endpoint needed.
+- [Offset Emissions page](offset-emissions.md) — proxy calculator at `/offset-emissions`; fully client-side with `calcProxy()` + `makeRecs()` + work plan modal.

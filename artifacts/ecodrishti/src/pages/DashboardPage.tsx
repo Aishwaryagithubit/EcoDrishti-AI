@@ -12,8 +12,9 @@ import {
 import { Leaf, TrendingDown, Users, Zap, Award, ShieldCheck, BarChart3, Flame, Activity } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useEffect, useRef, useState } from 'react';
+import { npNum, npFixed } from '@/lib/nepali';
 
-function AnimatedNumber({ value, suffix = '' }: { value: number; suffix?: string }) {
+function AnimatedNumber({ value, suffix = '', lang }: { value: number; suffix?: string; lang: string }) {
   const [display, setDisplay] = useState(0);
   const rafRef = useRef<number>(0);
   useEffect(() => {
@@ -24,13 +25,13 @@ function AnimatedNumber({ value, suffix = '' }: { value: number; suffix?: string
       const elapsed = now - startTime;
       const progress = Math.min(elapsed / duration, 1);
       const eased = 1 - Math.pow(1 - progress, 4);
-      setDisplay(Math.round((end) * eased));
+      setDisplay(Math.round(end * eased));
       if (progress < 1) rafRef.current = requestAnimationFrame(animate);
     };
     rafRef.current = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(rafRef.current);
   }, [value]);
-  return <span>{display.toLocaleString()}{suffix}</span>;
+  return <span>{npNum(display, lang)}{suffix}</span>;
 }
 
 const DUMMY_TREND = [
@@ -40,6 +41,15 @@ const DUMMY_TREND = [
   { month: 'Apr', transportKg: 680, electricityKg: 122, waterKg: 12, wasteKg: 135 },
   { month: 'May', transportKg: 660, electricityKg: 115, waterKg: 12, wasteKg: 128 },
   { month: 'Jun', transportKg: 690, electricityKg: 122, waterKg: 13, wasteKg: 132 },
+];
+
+const DUMMY_TREND_NP = [
+  { month: 'जन', transportKg: 712, electricityKg: 138, waterKg: 14, wasteKg: 148 },
+  { month: 'फेब', transportKg: 698, electricityKg: 130, waterKg: 13, wasteKg: 140 },
+  { month: 'मार्च', transportKg: 720, electricityKg: 142, waterKg: 15, wasteKg: 152 },
+  { month: 'अप्रिल', transportKg: 680, electricityKg: 122, waterKg: 12, wasteKg: 135 },
+  { month: 'मे', transportKg: 660, electricityKg: 115, waterKg: 12, wasteKg: 128 },
+  { month: 'जुन', transportKg: 690, electricityKg: 122, waterKg: 13, wasteKg: 132 },
 ];
 
 const DUMMY_SUMMARY = {
@@ -58,7 +68,6 @@ const DUMMY_SUMMARY = {
 };
 
 const SCORE_COLORS = { good: '#10b981', ok: '#f97316', bad: '#ef4444' };
-const CAT_COLORS = ['#10b981', '#f97316', '#3b82f6', '#8b5cf6'];
 
 export default function DashboardPage() {
   const { user } = useAuth();
@@ -75,13 +84,8 @@ export default function DashboardPage() {
   });
 
   const summary = summaryRaw ?? DUMMY_SUMMARY;
-  const trend = (trendRaw && trendRaw.length > 0) ? trendRaw : DUMMY_TREND;
-  const breakdown = (breakdownRaw && breakdownRaw.length > 0) ? breakdownRaw : [
-    { category: 'Transport', percentage: 72, color: '#10b981' },
-    { category: 'Electricity', percentage: 13, color: '#f97316' },
-    { category: 'Waste', percentage: 14, color: '#8b5cf6' },
-    { category: 'Water', percentage: 1, color: '#3b82f6' },
-  ];
+  const trendBase = (trendRaw && trendRaw.length > 0) ? trendRaw : (lang === 'np' ? DUMMY_TREND_NP : DUMMY_TREND);
+  const trend = trendBase;
 
   const score = summary.sustainabilityScore ?? 0;
   const scoreColor = score >= 70 ? SCORE_COLORS.good : score >= 40 ? SCORE_COLORS.ok : SCORE_COLORS.bad;
@@ -93,16 +97,9 @@ export default function DashboardPage() {
     ? (lang === 'np' ? 'ठीक छ' : 'Fair')
     : (lang === 'np' ? 'सुधार चाहिन्छ' : 'Needs Work');
 
-  const catLabels: Record<string, string> = {
-    Transport: lang === 'np' ? 'यातायात' : 'Transport',
-    Electricity: lang === 'np' ? 'बिजुली' : 'Electricity',
-    Water: lang === 'np' ? 'पानी' : 'Water',
-    Waste: lang === 'np' ? 'फोहोर' : 'Waste',
-  };
-
   const kpis = [
     {
-      label: lang === 'np' ? 'कुल उत्सर्जन' : 'Monthly CO₂',
+      label: lang === 'np' ? 'मासिक CO₂' : 'Monthly CO₂',
       value: Math.round(summary.totalEmissionsKg ?? 0),
       suffix: ' kg',
       icon: Flame,
@@ -112,7 +109,7 @@ export default function DashboardPage() {
     },
     {
       label: lang === 'np' ? 'कार्बन कटौती' : 'Carbon Reduced',
-      value: Math.abs(summary.carbonReductionPercent ?? 0),
+      value: +(Math.abs(summary.carbonReductionPercent ?? 8.4).toFixed(1)),
       suffix: '%',
       icon: TrendingDown,
       color: 'text-emerald-600',
@@ -121,7 +118,7 @@ export default function DashboardPage() {
     },
     {
       label: lang === 'np' ? 'सक्रिय विद्यार्थीहरू' : 'Active Students',
-      value: summary.activeStudents ?? 0,
+      value: summary.activeStudents ?? 460,
       suffix: '',
       icon: Users,
       color: 'text-blue-600',
@@ -130,13 +127,20 @@ export default function DashboardPage() {
     },
     {
       label: lang === 'np' ? 'चुनौतीहरू पूरा' : 'Challenges Done',
-      value: summary.challengesCompleted ?? 0,
+      value: summary.challengesCompleted ?? 3,
       suffix: '',
       icon: Zap,
       color: 'text-orange-500',
       bg: 'from-orange-500/15 to-orange-500/5',
       border: 'border-orange-200 dark:border-orange-800/40',
     },
+  ];
+
+  const recentActivity = [
+    { icon: '✅', text: lang === 'np' ? 'जुन महिनाको कार्बन डेटा सबमिट — ९५७ kg CO₂' : 'June carbon data submitted — 957 kg CO₂', time: lang === 'np' ? '२ घण्टा पहिले' : '2h ago', color: 'text-emerald-600 bg-emerald-100 dark:bg-emerald-900/30' },
+    { icon: '🏆', text: lang === 'np' ? 'Walk-to-School चुनौती सम्पन्न — ९४% सहभागिता' : 'Walk-to-School challenge completed — 94% participation', time: lang === 'np' ? '१ दिन पहिले' : '1d ago', color: 'text-orange-600 bg-orange-100 dark:bg-orange-900/30' },
+    { icon: '📈', text: lang === 'np' ? 'गत महिनाभन्दा ५% बिजुली बचत' : 'Electricity usage reduced 5% vs last month', time: lang === 'np' ? '३ दिन पहिले' : '3d ago', color: 'text-blue-600 bg-blue-100 dark:bg-blue-900/30' },
+    { icon: '🌱', text: lang === 'np' ? 'विद्यालय राष्ट्रिय इको लिगमा #३ स्थानमा' : 'School climbed to #3 in National Eco League', time: lang === 'np' ? '१ हप्ता पहिले' : '1w ago', color: 'text-purple-600 bg-purple-100 dark:bg-purple-900/30' },
   ];
 
   return (
@@ -153,14 +157,14 @@ export default function DashboardPage() {
               {user?.schoolName}
               {summary && (
                 <span className="ml-2 inline-flex items-center gap-1 text-xs bg-primary/10 text-primary rounded-full px-2.5 py-0.5 font-semibold">
-                  🏅 {lang === 'np' ? `#${summary.ecoLeagueRank} राष्ट्रिय स्थान` : `#${summary.ecoLeagueRank} National Rank`}
+                  🏅 {lang === 'np' ? `राष्ट्रिय #${npNum(summary.ecoLeagueRank, lang)} स्थान` : `National Rank #${summary.ecoLeagueRank}`}
                 </span>
               )}
             </p>
           </div>
         </div>
 
-        {/* === MONTHLY EMISSIONS TREND — TOP === */}
+        {/* Monthly Emissions Trend — TOP */}
         <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -234,14 +238,14 @@ export default function DashboardPage() {
                 <Skeleton className="h-8 w-24" />
               ) : (
                 <div className={`text-2xl font-extrabold ${kpi.color}`}>
-                  <AnimatedNumber value={kpi.value} suffix={kpi.suffix} />
+                  <AnimatedNumber value={kpi.value} suffix={kpi.suffix} lang={lang} />
                 </div>
               )}
             </div>
           ))}
         </div>
 
-        {/* Score + Breakdown row */}
+        {/* Score + Breakdown + League row */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Sustainability Score */}
           <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
@@ -257,20 +261,20 @@ export default function DashboardPage() {
               <>
                 <div className="flex items-end gap-2 mb-3">
                   <span className="text-6xl font-black" style={{ color: scoreColor }}>
-                    <AnimatedNumber value={score} />
+                    <AnimatedNumber value={score} lang={lang} />
                   </span>
                   <span className="text-xl text-muted-foreground mb-2">/100</span>
                 </div>
                 <div className="w-full bg-muted rounded-full h-3 mb-3 overflow-hidden">
                   <div
-                    className="h-3 rounded-full transition-all duration-1200"
+                    className="h-3 rounded-full transition-all duration-1000"
                     style={{ width: `${score}%`, background: `linear-gradient(90deg, ${scoreColor}99, ${scoreColor})` }}
                   />
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-bold" style={{ color: scoreColor }}>{scoreLabel}</span>
                   <span className="text-xs text-muted-foreground">
-                    {lang === 'np' ? 'डेटा आत्मविश्वास' : 'Confidence'}: <strong className="text-foreground">{summary.dataConfidenceScore ?? 0}%</strong>
+                    {lang === 'np' ? 'आत्मविश्वास' : 'Confidence'}: <strong className="text-foreground">{npNum(summary.dataConfidenceScore ?? 87, lang)}%</strong>
                   </span>
                 </div>
               </>
@@ -280,22 +284,22 @@ export default function DashboardPage() {
           {/* Category bars */}
           <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
             <h3 className="text-sm font-semibold text-foreground mb-4">
-              {lang === 'np' ? 'श्रेणी विवरण' : 'Emissions by Source'}
+              {lang === 'np' ? 'उत्सर्जन स्रोत अनुसार' : 'Emissions by Source'}
             </h3>
             <div className="space-y-3.5">
               {[
-                { label: lang === 'np' ? 'यातायात' : 'Transport', value: summary.transportEmissionsKg ?? 0, color: '#10b981', icon: '🚌' },
-                { label: lang === 'np' ? 'बिजुली' : 'Electricity', value: summary.electricityEmissionsKg ?? 0, color: '#f97316', icon: '⚡' },
-                { label: lang === 'np' ? 'फोहोर' : 'Waste', value: summary.wasteEmissionsKg ?? 0, color: '#8b5cf6', icon: '♻️' },
-                { label: lang === 'np' ? 'पानी' : 'Water', value: summary.waterEmissionsKg ?? 0, color: '#3b82f6', icon: '💧' },
+                { label: lang === 'np' ? 'यातायात' : 'Transport', value: summary.transportEmissionsKg ?? 690, color: '#10b981', icon: '🚌' },
+                { label: lang === 'np' ? 'बिजुली' : 'Electricity', value: summary.electricityEmissionsKg ?? 122, color: '#f97316', icon: '⚡' },
+                { label: lang === 'np' ? 'फोहोर' : 'Waste', value: summary.wasteEmissionsKg ?? 132, color: '#8b5cf6', icon: '♻️' },
+                { label: lang === 'np' ? 'पानी' : 'Water', value: summary.waterEmissionsKg ?? 13, color: '#3b82f6', icon: '💧' },
               ].map(cat => {
-                const total = (summary.totalEmissionsKg ?? 1) || 1;
+                const total = (summary.totalEmissionsKg ?? 957) || 1;
                 const pct = Math.round((cat.value / total) * 100);
                 return (
                   <div key={cat.label}>
                     <div className="flex items-center justify-between text-xs mb-1.5">
                       <span className="text-foreground font-medium">{cat.icon} {cat.label}</span>
-                      <span className="font-bold" style={{ color: cat.color }}>{cat.value.toFixed(0)} kg</span>
+                      <span className="font-bold" style={{ color: cat.color }}>{npFixed(cat.value, 0, lang)} kg</span>
                     </div>
                     <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
                       <div
@@ -323,42 +327,37 @@ export default function DashboardPage() {
               {sumLoading ? <Skeleton className="h-20 w-full" /> : (
                 <>
                   <div className="flex items-baseline gap-1 mb-1">
-                    <span className="text-5xl font-black text-orange-500">#{summary.ecoLeagueRank}</span>
+                    <span className="text-5xl font-black text-orange-500">#{npNum(summary.ecoLeagueRank, lang)}</span>
                   </div>
                   <p className="text-xs text-muted-foreground">
                     {lang === 'np'
-                      ? `${summary.totalSchools} विद्यालयहरू मध्ये`
-                      : `out of ${summary.totalSchools} schools in Nepal`}
+                      ? `${npNum(summary.totalSchools, lang)} समान-आकारका विद्यालयहरू मध्ये`
+                      : `out of ${summary.totalSchools} similar size schools`}
                   </p>
                 </>
               )}
             </div>
             <div className="mt-4 pt-4 border-t border-orange-300/30 dark:border-orange-700/20 grid grid-cols-2 gap-3">
               <div>
-                <div className="text-sm font-bold text-foreground">{summary.activeStudents}</div>
+                <div className="text-sm font-bold text-foreground">{npNum(summary.activeStudents ?? 460, lang)}</div>
                 <div className="text-[11px] text-muted-foreground">{lang === 'np' ? 'सक्रिय विद्यार्थी' : 'Active Students'}</div>
               </div>
               <div>
-                <div className="text-sm font-bold text-emerald-600">↓ {Math.abs(summary.carbonReductionPercent ?? 0).toFixed(1)}%</div>
+                <div className="text-sm font-bold text-emerald-600">↓ {npFixed(Math.abs(summary.carbonReductionPercent ?? 8.4), 1, lang)}%</div>
                 <div className="text-[11px] text-muted-foreground">{lang === 'np' ? 'CO₂ कटौती' : 'CO₂ Reduced'}</div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* Recent Activity feed — static */}
+        {/* Recent Activity */}
         <div className="bg-card border border-border rounded-2xl p-5 shadow-sm">
           <h3 className="font-bold text-sm text-foreground mb-4 flex items-center gap-2">
             <Leaf className="w-4 h-4 text-primary" />
             {lang === 'np' ? 'हालैका गतिविधिहरू' : 'Recent Activity'}
           </h3>
           <div className="space-y-3">
-            {[
-              { icon: '✅', text: lang === 'np' ? 'जुन महिनाको कार्बन डेटा सबमिट गरियो' : 'June carbon data submitted — 957 kg CO₂', time: '2h ago', color: 'text-emerald-600 bg-emerald-100 dark:bg-emerald-900/30' },
-              { icon: '🏆', text: lang === 'np' ? 'Walk-to-School चुनौती सफलतापूर्वक पूरा भयो' : 'Walk-to-School challenge completed — 94% participation', time: '1d ago', color: 'text-orange-600 bg-orange-100 dark:bg-orange-900/30' },
-              { icon: '📈', text: lang === 'np' ? 'मे महिनामा ५% बिजुली बचत भयो' : 'Electricity usage reduced 5% vs last month', time: '3d ago', color: 'text-blue-600 bg-blue-100 dark:bg-blue-900/30' },
-              { icon: '🌱', text: lang === 'np' ? 'विद्यालय इको लिगमा #३ स्थानमा पुग्यो' : 'School climbed to #3 in National Eco League', time: '1w ago', color: 'text-purple-600 bg-purple-100 dark:bg-purple-900/30' },
-            ].map((item, i) => (
+            {recentActivity.map((item, i) => (
               <div key={i} className="flex items-start gap-3">
                 <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs flex-shrink-0 ${item.color}`}>
                   {item.icon}
