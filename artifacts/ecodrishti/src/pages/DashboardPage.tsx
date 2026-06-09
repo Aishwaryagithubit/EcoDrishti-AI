@@ -84,8 +84,8 @@ export default function DashboardPage() {
   });
 
   const summary = summaryRaw ?? DUMMY_SUMMARY;
-  const trendBase = (trendRaw && trendRaw.length > 0) ? trendRaw : (lang === 'np' ? DUMMY_TREND_NP : DUMMY_TREND);
-  const trend = trendBase;
+  const trendBase = Array.isArray(trendRaw) && trendRaw.length > 0 ? trendRaw : (lang === 'np' ? DUMMY_TREND_NP : DUMMY_TREND);
+  const trend = Array.isArray(trendBase) ? trendBase : (lang === 'np' ? DUMMY_TREND_NP : DUMMY_TREND);
 
   const score = summary.sustainabilityScore ?? 0;
   const scoreColor = score >= 70 ? SCORE_COLORS.good : score >= 40 ? SCORE_COLORS.ok : SCORE_COLORS.bad;
@@ -196,7 +196,7 @@ export default function DashboardPage() {
             <Skeleton className="h-52 w-full" />
           ) : (
             <ResponsiveContainer width="100%" height={220}>
-              <AreaChart data={trend} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+              <AreaChart data={Array.isArray(trend) ? trend : []} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
                 <defs>
                   {[
                     { id: 'g1', color: '#10b981' },

@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Calculator, Zap, Droplets, Trash2, Bus, Brain, TrendingDown, CheckCircle, ChevronRight, Leaf, ExternalLink, ClipboardList, Target, Users } from 'lucide-react';
+import { Calculator, Zap, Droplets, Trash2, Bus, Brain, TrendingDown, CheckCircle, ChevronRight, ClipboardList, Target, Users, Sparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { npNum, npFixed } from '@/lib/nepali';
 
@@ -189,13 +189,6 @@ export default function CarbonCalculatorPage() {
       }
     });
   };
-
-  const greeting = (() => {
-    const h = new Date().getHours();
-    if (h < 12) return lang === 'np' ? 'शुभ प्रभात 🌅' : 'Good morning 🌅';
-    if (h < 17) return lang === 'np' ? 'शुभ दिनमध्यान ☀️' : 'Good afternoon ☀️';
-    return lang === 'np' ? 'शुभ सन्ध्या 🌙' : 'Good evening 🌙';
-  })();
 
   const workPlan = workPlanRec ? generateWorkPlan(workPlanRec, user?.schoolName ?? 'Your School', lang) : null;
 
@@ -416,21 +409,24 @@ export default function CarbonCalculatorPage() {
               </div>
 
               {/* AI Proxy Card */}
-              <div className="bg-gradient-to-br from-emerald-500/10 to-teal-500/5 border border-emerald-200 dark:border-emerald-800/50 rounded-2xl p-5">
-                <p className="text-base font-bold text-foreground mb-1">{greeting}</p>
+              <div className="bg-gradient-to-br from-emerald-500/10 via-teal-500/10 to-cyan-500/5 border border-emerald-200 dark:border-emerald-800/50 rounded-2xl p-5">
+                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 text-[11px] font-semibold uppercase tracking-[0.22em] mb-3">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  Proxy AI
+                </div>
                 <p className="text-sm font-semibold text-foreground mb-2">
-                  {lang === 'np' ? `स्वागत छ, ${user?.name?.split(' ')[0] ?? ''}!` : `Welcome, ${user?.name?.split(' ')[0] ?? ''}!`}
+                  {lang === 'np' ? 'How can i help you without proper data?' : 'How can i help you without proper data?'}
                 </p>
                 <p className="text-xs text-muted-foreground mb-4 leading-relaxed">
                   {lang === 'np'
-                    ? 'यो उपकरणले तपाईंलाई आफ्नो विद्यालयको कार्बन उत्सर्जन बुझ्न मद्दत गर्छ। केही सरल प्रश्नहरूको उत्तर दिएर, तपाईंले जलवायु परिवर्तनमा आफ्नो प्रभावको बारेमा बहुमूल्य जानकारी प्राप्त गर्नुहुन्छ। के तपाईं आफ्नो पर्यावरणीय प्रभाव नियन्त्रण गर्न तयार हुनुहुन्छ?'
-                    : 'This tool helps you understand your school\'s carbon emissions. By answering a few simple questions, you\'ll gain valuable insights into your impact on climate change. Ready to take charge of your environmental impact? Let\'s explore your carbon footprint together.'}
+                    ? 'प्रत्येक अनुमानलाई उपयोगी, व्यवहारिक र विद्यालय-उपयुक्त बनाउँदै Proxy AI ले तपाईंलाई अर्को चरणमा लैजान्छ।'
+                    : 'Proxy AI turns rough inputs into practical school-ready estimates, recommendations, and action plans.'}
                 </p>
-                <Link href="/offset-emissions">
-                  <Button className="w-full gap-2" variant="outline">
-                    <Leaf className="w-4 h-4 text-emerald-600" />
-                    {lang === 'np' ? 'उत्सर्जन अफसेट गर्नुहोस्' : 'Offset Emissions'}
-                    <ExternalLink className="w-3 h-3 ml-auto" />
+                <Link href="/proxy-ai">
+                  <Button className="w-full gap-2 font-bold shadow-lg shadow-emerald-500/10" variant="default">
+                    <Brain className="w-4 h-4" />
+                    <span className="text-base">Proxy AI</span>
+                    <ChevronRight className="w-3.5 h-3.5 ml-auto" />
                   </Button>
                 </Link>
               </div>

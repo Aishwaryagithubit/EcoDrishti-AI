@@ -1,11 +1,11 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Leaf, Brain, TrendingDown, ChevronRight, Target, Users, ClipboardList, CheckCircle, ArrowLeft } from 'lucide-react';
+import { Leaf, Brain, TrendingDown, ChevronRight, Target, Users, ClipboardList, CheckCircle, ArrowLeft, MessageCircle, Send, Sparkles } from 'lucide-react';
 import { Link } from 'wouter';
 import { npNum, npFixed } from '@/lib/nepali';
 
@@ -116,17 +116,102 @@ export default function OffsetEmissionsPage() {
   const { lang } = useLanguage();
   const { user } = useAuth();
   const [answers, setAnswers] = useState<ProxyAnswers>(DEFAULT);
+  const [stepIndex, setStepIndex] = useState(0);
   const [showResults, setShowResults] = useState(false);
   const [selectedRec, setSelectedRec] = useState<ProxyRec | null>(null);
+  const [chatInput, setChatInput] = useState(lang === 'np' ? 'के म गणना गर्न सक्छु?' : 'Can I calculate?');
+  const [chatMessages, setChatMessages] = useState<Array<{ role: 'assistant' | 'user'; text: string }>>([
+    { role: 'assistant', text: lang === 'np' ? 'पहिलो प्रश्नबाट सुरु गरौं: विद्यार्थी र कर्मचारी कति छन्?' : 'Let us start with the first question: how many students and staff are there?' },
+  ]);
 
   const result = useMemo(() => calcProxy(answers), [answers]);
   const recs = useMemo(() => showResults ? makeRecs(result, lang) : [], [result, lang, showResults]);
+  const steps = useMemo(() => ([
+    {
+      key: 'schoolSize',
+      title: lang === 'np' ? '१. विद्यालयको आकार' : '1. School Size',
+      prompt: lang === 'np' ? 'विद्यार्थी र कर्मचारीको संख्या भर्नुहोस्।' : 'Enter the student and staff count.',
+    },
+    {
+      key: 'commute',
+      title: lang === 'np' ? '२. यातायात ढाँचा' : '2. Commute Pattern',
+      prompt: lang === 'np' ? 'विद्यार्थीहरू कसरी आउँछन्? प्रतिशतहरू भर्नुहोस्।' : 'How do students commute? Fill the percentage estimates.',
+    },
+    {
+      key: 'energy',
+      title: lang === 'np' ? '३. ऊर्जा र बिजुली' : '3. Energy & Electricity',
+      prompt: lang === 'np' ? 'मुख्य ऊर्जा स्रोत र मासिक बिजुली बिल दिनुहोस्।' : 'Select the main energy source and monthly electricity bill.',
+    },
+    {
+      key: 'canteen',
+      title: lang === 'np' ? '४. क्यान्टिन र खाना' : '4. Canteen & Food',
+      prompt: lang === 'np' ? 'क्यान्टिन छ भने मासु दिनहरू कति छन्? नभए छोड्न सक्नुहुन्छ।' : 'If there is a canteen, how many meat days per week?',
+    },
+    {
+      key: 'wasteWater',
+      title: lang === 'np' ? '५. फोहोर र पानी' : '5. Waste & Water',
+      prompt: lang === 'np' ? 'फोहोर व्यवस्थापन, पानीको स्रोत, विद्यालय दिन, र बगैँचाको स्थिति भर्नुहोस्।' : 'Enter waste management, water source, school days, and garden status.',
+    },
+  ]), [lang]);
 
   const scoreColor = result.score >= 70 ? '#10b981' : result.score >= 50 ? '#f97316' : '#ef4444';
   const h = new Date().getHours();
   const greeting = h < 12 ? (lang === 'np' ? 'शुभ प्रभात 🌅' : 'Good morning 🌅') : h < 17 ? (lang === 'np' ? 'शुभ दिनमध्यान ☀️' : 'Good afternoon ☀️') : (lang === 'np' ? 'शुभ सन्ध्या 🌙' : 'Good evening 🌙');
 
   const wp = selectedRec ? (WORK_PLANS[selectedRec.id] ?? WORK_PLANS['elec']) : null;
+  const currentStep = steps[stepIndex] ?? steps[0];
+  const isFinalStep = stepIndex === steps.length - 1;
+
+  useEffect(() => {
+    setStepIndex(0);
+    setChatInput(lang === 'np' ? 'के म गणना गर्न सक्छु?' : 'Can I calculate?');
+    setChatMessages([
+      { role: 'assistant', text: lang === 'np' ? 'पहिलो प्रश्नबाट सुरु गरौं: विद्यार्थी र कर्मचारी कति छन्?' : 'Let us start with the first question: how many students and staff are there?' },
+    ]);
+  }, [lang]);
+
+  useEffect(() => {
+    if (showResults || stepIndex <= 0) return;
+    const prompt = steps[stepIndex]?.prompt;
+    if (!prompt) return;
+    setChatMessages(prev => {
+      const last = prev[prev.length - 1];
+      if (last?.role === 'assistant' && last.text === prompt) return prev;
+      return [...prev, { role: 'assistant', text: prompt }];
+    });
+  }, [stepIndex, steps, showResults]);
+
+  const startCalculation = () => {
+    setShowResults(true);
+    setChatMessages(prev => [...prev, { role: 'user', text: lang === 'np' ? 'के म गणना गर्न सक्छु?' : 'Can I calculate?' }, { role: 'assistant', text: lang === 'np' ? 'ठीक छ, गणना सुरु गर्दैछु।' : 'Confirmed. I am calculating now.' }]);
+  };
+
+  const nextStep = () => {
+    if (stepIndex < steps.length - 1) {
+      setStepIndex(index => index + 1);
+      setChatMessages(prev => [...prev, { role: 'user', text: lang === 'np' ? 'अर्को प्रश्न' : 'Next question' }]);
+      return;
+    }
+
+    startCalculation();
+  };
+
+  const sendChat = (text: string) => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+
+    setChatMessages(prev => [...prev, { role: 'user', text: trimmed }]);
+
+    const shouldCalculate = /calculate|compute|can i calculate|yes|start/i.test(trimmed.toLowerCase());
+    if (shouldCalculate && stepIndex === steps.length - 1) {
+      setShowResults(true);
+      setChatMessages(prev => [...prev, { role: 'assistant', text: lang === 'np' ? 'ठीक छ, गणना सुरु गर्दैछु।' : 'Confirmed. I am calculating now.' }]);
+    } else {
+      setChatMessages(prev => [...prev, { role: 'assistant', text: lang === 'np' ? 'म तयार छु। यदि चाहनुहुन्छ भने “Can I calculate?” भनेर भन्नुहोस्।' : 'I am ready. Say “Can I calculate?” when you want the report.' }]);
+    }
+
+    setChatInput('');
+  };
 
   const sel = (key: keyof ProxyAnswers) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const v = e.target.type === 'checkbox' ? (e.target as HTMLInputElement).checked : e.target.type === 'number' ? +e.target.value : e.target.value;
@@ -144,136 +229,194 @@ export default function OffsetEmissionsPage() {
               {lang === 'np' ? 'क्याल्कुलेटरमा फर्कनुहोस्' : 'Back to Calculator'}
             </button>
           </Link>
-          <div className="bg-gradient-to-br from-emerald-500/10 to-teal-500/5 border border-emerald-200 dark:border-emerald-800/50 rounded-2xl p-5">
-            <p className="text-lg font-bold text-foreground">{greeting}</p>
-            <p className="text-base font-semibold text-foreground mt-1">
-              {lang === 'np' ? `स्वागत छ, ${user?.name?.split(' ')[0] ?? ''}!` : `Welcome, ${user?.name?.split(' ')[0] ?? ''}!`}
-            </p>
+          <div className="bg-gradient-to-br from-emerald-500/10 via-teal-500/10 to-cyan-500/5 border border-emerald-200 dark:border-emerald-800/50 rounded-2xl p-5">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 text-[11px] font-semibold uppercase tracking-[0.22em] mb-3">
+              <Sparkles className="w-3.5 h-3.5" />
+              Smart Assistant
+            </div>
+            <p className="text-lg font-black text-foreground leading-tight">{lang === 'np' ? 'How can I help you without proper data?' : 'How can I help you without proper data?'}</p>
             <p className="text-sm text-muted-foreground mt-2 leading-relaxed">
               {lang === 'np'
-                ? 'यो उपकरणले तपाईंलाई आफ्नो विद्यालयको कार्बन उत्सर्जन बुझ्न मद्दत गर्छ। केही सरल प्रश्नहरूको उत्तर दिएर, तपाईंले जलवायु परिवर्तनमा आफ्नो प्रभावको बारेमा बहुमूल्य जानकारी प्राप्त गर्नुहुन्छ। के तपाईं आफ्नो पर्यावरणीय प्रभाव नियन्त्रण गर्न तयार हुनुहुन्छ? हामी मिलेर तपाईंको कार्बन फुटप्रिन्ट अन्वेषण गरौं।'
-                : "This tool helps you understand your school's carbon emissions. By answering a few simple questions, you'll gain valuable insights into your impact on climate change. Ready to take charge of your environmental impact? Let's explore your carbon footprint together."}
+                ? 'इनपुटहरूको आधारमा यो सहायकले अनुमानित कार्बन फुटप्रिन्ट, एआई सिफारिस, र विद्यालय-उपयुक्त कार्य योजना तयार गर्छ।'
+                : 'This assistant turns imperfect inputs into a practical carbon footprint estimate, recommendations, and a school-ready action plan.'}
             </p>
           </div>
         </div>
 
-        {/* Proxy Questions */}
-        <div className="space-y-4">
-          <h2 className="font-bold text-foreground flex items-center gap-2">
-            <Brain className="w-5 h-5 text-primary" />
-            {lang === 'np' ? 'प्रश्नहरूको उत्तर दिनुहोस्' : 'Answer Proxy Questions'}
-          </h2>
-
-          {/* Q1 - School size */}
-          <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-foreground">
-              {lang === 'np' ? '१. विद्यालयको आकार' : '1. School Size'}
-            </h3>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label className="text-xs">{lang === 'np' ? 'विद्यार्थी' : 'Students'}</Label>
-                <input type="number" min={1} value={answers.studentCount} onChange={sel('studentCount')} className="w-full mt-1 px-3 py-2 text-sm border border-input rounded-lg bg-background outline-none focus:ring-2 focus:ring-primary/30" />
+        <div className="grid grid-cols-1 lg:grid-cols-[1.15fr_0.85fr] gap-5 items-start">
+          <div className="space-y-4">
+            <div className="bg-card border border-border rounded-2xl p-4 sm:p-5 space-y-4 shadow-sm">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="inline-flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-emerald-700 dark:text-emerald-300 bg-emerald-500/10 px-3 py-1 rounded-full mb-2">
+                    <Sparkles className="w-3.5 h-3.5" />
+                    {lang === 'np' ? 'इनपुट सहायक' : 'Input Assistant'}
+                  </div>
+                  <h2 className="font-bold text-foreground flex items-center gap-2">
+                    <Brain className="w-5 h-5 text-primary" />
+                    {currentStep?.title}
+                  </h2>
+                  <p className="text-sm text-muted-foreground mt-1 leading-relaxed">{currentStep?.prompt}</p>
+                </div>
+                <div className="shrink-0 rounded-xl border border-border bg-muted/40 px-3 py-2 text-right">
+                  <div className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">{lang === 'np' ? 'चरण' : 'Step'}</div>
+                  <div className="text-sm font-bold text-foreground">{stepIndex + 1}/{steps.length}</div>
+                </div>
               </div>
-              <div>
-                <Label className="text-xs">{lang === 'np' ? 'शिक्षक/कर्मचारी' : 'Staff'}</Label>
-                <input type="number" min={1} value={answers.staffCount} onChange={sel('staffCount')} className="w-full mt-1 px-3 py-2 text-sm border border-input rounded-lg bg-background outline-none focus:ring-2 focus:ring-primary/30" />
-              </div>
-            </div>
-          </div>
 
-          {/* Q2 - Transport */}
-          <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-foreground">
-              {lang === 'np' ? '२. विद्यार्थीहरू कसरी विद्यालय आउँछन्? (% अनुमान)' : '2. How do students commute? (% estimate)'}
-            </h3>
-            <p className="text-xs text-muted-foreground">{lang === 'np' ? 'जोड १००% हुनुपर्छ' : 'Should sum to 100%'}</p>
-            <div className="grid grid-cols-3 gap-3">
-              {[
-                { key: 'walkPct' as const, label: lang === 'np' ? '🚶 पैदल/साइकल' : '🚶 Walk/Cycle' },
-                { key: 'busPct' as const, label: lang === 'np' ? '🚌 बस' : '🚌 Bus' },
-                { key: 'carPct' as const, label: lang === 'np' ? '🚗 कार/ट्याक्सी' : '🚗 Car/Taxi' },
-              ].map(f => (
-                <div key={f.key}>
-                  <Label className="text-xs">{f.label}</Label>
-                  <div className="flex items-center gap-1 mt-1">
-                    <input type="number" min={0} max={100} value={answers[f.key]} onChange={sel(f.key)} className="w-full px-3 py-2 text-sm border border-input rounded-lg bg-background outline-none focus:ring-2 focus:ring-primary/30" />
-                    <span className="text-xs text-muted-foreground">%</span>
+              {stepIndex === 0 && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs">{lang === 'np' ? 'विद्यार्थी' : 'Students'}</Label>
+                    <input type="number" min={1} value={answers.studentCount} onChange={sel('studentCount')} className="w-full mt-1 px-3 py-2 text-sm border border-input rounded-lg bg-background outline-none focus:ring-2 focus:ring-primary/30" />
+                  </div>
+                  <div>
+                    <Label className="text-xs">{lang === 'np' ? 'शिक्षक/कर्मचारी' : 'Staff'}</Label>
+                    <input type="number" min={1} value={answers.staffCount} onChange={sel('staffCount')} className="w-full mt-1 px-3 py-2 text-sm border border-input rounded-lg bg-background outline-none focus:ring-2 focus:ring-primary/30" />
                   </div>
                 </div>
-              ))}
-            </div>
-          </div>
+              )}
 
-          {/* Q3 - Energy */}
-          <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-foreground">
-              {lang === 'np' ? '३. ऊर्जा र बिजुली' : '3. Energy & Electricity'}
-            </h3>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label className="text-xs">{lang === 'np' ? 'मुख्य ऊर्जा स्रोत' : 'Main Energy Source'}</Label>
-                <select value={answers.energySource} onChange={sel('energySource')} className="w-full mt-1 px-3 py-2 text-sm border border-input rounded-lg bg-background outline-none focus:ring-2 focus:ring-primary/30">
-                  <option value="grid">{lang === 'np' ? 'जाति ग्रिड (जलविद्युत)' : 'Grid (Hydro Nepal)'}</option>
-                  <option value="solar">{lang === 'np' ? 'सोलार प्यानल' : 'Solar Panels'}</option>
-                  <option value="diesel">{lang === 'np' ? 'डिजेल जेनेरेटर' : 'Diesel Generator'}</option>
-                  <option value="mixed">{lang === 'np' ? 'मिश्रित' : 'Mixed'}</option>
-                </select>
-              </div>
-              <div>
-                <Label className="text-xs">{lang === 'np' ? 'मासिक बिजुली बिल (रु.)' : 'Monthly Electricity Bill (NPR)'}</Label>
-                <input type="number" min={0} value={answers.monthlyBill} onChange={sel('monthlyBill')} className="w-full mt-1 px-3 py-2 text-sm border border-input rounded-lg bg-background outline-none focus:ring-2 focus:ring-primary/30" />
-              </div>
-            </div>
-          </div>
-
-          {/* Q4 - Canteen */}
-          <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-foreground">
-              {lang === 'np' ? '४. क्यान्टिन र खाना' : '4. Canteen & Food'}
-            </h3>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="flex items-center gap-2">
-                <input type="checkbox" id="canteen" checked={answers.hasCanteen} onChange={sel('hasCanteen')} className="w-4 h-4 accent-primary" />
-                <Label htmlFor="canteen" className="text-xs cursor-pointer">{lang === 'np' ? 'क्यान्टिन छ?' : 'Has canteen?'}</Label>
-              </div>
-              {answers.hasCanteen && (
-                <div>
-                  <Label className="text-xs">{lang === 'np' ? 'प्रति हप्ता मासु दिन' : 'Meat days per week'}</Label>
-                  <input type="number" min={0} max={5} value={answers.meatDaysPerWeek} onChange={sel('meatDaysPerWeek')} className="w-full mt-1 px-3 py-2 text-sm border border-input rounded-lg bg-background outline-none focus:ring-2 focus:ring-primary/30" />
+              {stepIndex === 1 && (
+                <div className="grid grid-cols-3 gap-3">
+                  {[
+                    { key: 'walkPct' as const, label: lang === 'np' ? '🚶 पैदल/साइकल' : '🚶 Walk/Cycle' },
+                    { key: 'busPct' as const, label: lang === 'np' ? '🚌 बस' : '🚌 Bus' },
+                    { key: 'carPct' as const, label: lang === 'np' ? '🚗 कार/ट्याक्सी' : '🚗 Car/Taxi' },
+                  ].map(f => (
+                    <div key={f.key}>
+                      <Label className="text-xs">{f.label}</Label>
+                      <div className="flex items-center gap-1 mt-1">
+                        <input type="number" min={0} max={100} value={answers[f.key]} onChange={sel(f.key)} className="w-full px-3 py-2 text-sm border border-input rounded-lg bg-background outline-none focus:ring-2 focus:ring-primary/30" />
+                        <span className="text-xs text-muted-foreground">%</span>
+                      </div>
+                    </div>
+                  ))}
                 </div>
+              )}
+
+              {stepIndex === 2 && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs">{lang === 'np' ? 'मुख्य ऊर्जा स्रोत' : 'Main Energy Source'}</Label>
+                    <select value={answers.energySource} onChange={sel('energySource')} className="w-full mt-1 px-3 py-2 text-sm border border-input rounded-lg bg-background outline-none focus:ring-2 focus:ring-primary/30">
+                      <option value="grid">{lang === 'np' ? 'जाति ग्रिड (जलविद्युत)' : 'Grid (Hydro Nepal)'}</option>
+                      <option value="solar">{lang === 'np' ? 'सोलार प्यानल' : 'Solar Panels'}</option>
+                      <option value="diesel">{lang === 'np' ? 'डिजेल जेनेरेटर' : 'Diesel Generator'}</option>
+                      <option value="mixed">{lang === 'np' ? 'मिश्रित' : 'Mixed'}</option>
+                    </select>
+                  </div>
+                  <div>
+                    <Label className="text-xs">{lang === 'np' ? 'मासिक बिजुली बिल (रु.)' : 'Monthly Electricity Bill (NPR)'}</Label>
+                    <input type="number" min={0} value={answers.monthlyBill} onChange={sel('monthlyBill')} className="w-full mt-1 px-3 py-2 text-sm border border-input rounded-lg bg-background outline-none focus:ring-2 focus:ring-primary/30" />
+                  </div>
+                </div>
+              )}
+
+              {stepIndex === 3 && (
+                <div className="grid grid-cols-2 gap-3 items-start">
+                  <div className="flex items-center gap-2 pt-7">
+                    <input type="checkbox" id="canteen" checked={answers.hasCanteen} onChange={sel('hasCanteen')} className="w-4 h-4 accent-primary" />
+                    <Label htmlFor="canteen" className="text-xs cursor-pointer">{lang === 'np' ? 'क्यान्टिन छ?' : 'Has canteen?'}</Label>
+                  </div>
+                  <div>
+                    <Label className="text-xs">{lang === 'np' ? 'प्रति हप्ता मासु दिन' : 'Meat days per week'}</Label>
+                    <input type="number" min={0} max={5} value={answers.meatDaysPerWeek} onChange={sel('meatDaysPerWeek')} className="w-full mt-1 px-3 py-2 text-sm border border-input rounded-lg bg-background outline-none focus:ring-2 focus:ring-primary/30" />
+                  </div>
+                </div>
+              )}
+
+              {stepIndex === 4 && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <Label className="text-xs">{lang === 'np' ? 'फोहोर व्यवस्थापन' : 'Waste Management'}</Label>
+                    <select value={answers.wasteManagement} onChange={sel('wasteManagement')} className="w-full mt-1 px-3 py-2 text-sm border border-input rounded-lg bg-background outline-none focus:ring-2 focus:ring-primary/30">
+                      <option value="landfill">{lang === 'np' ? 'मिश्रित ल्यान्डफिल' : 'Mixed Landfill'}</option>
+                      <option value="segregated">{lang === 'np' ? 'पृथकीकृत संकलन' : 'Segregated Collection'}</option>
+                      <option value="compost">{lang === 'np' ? 'कम्पोस्ट + पुनःचक्रण' : 'Compost + Recycling'}</option>
+                    </select>
+                  </div>
+                  <div>
+                    <Label className="text-xs">{lang === 'np' ? 'पानीको स्रोत' : 'Water Source'}</Label>
+                    <select value={answers.waterSource} onChange={sel('waterSource')} className="w-full mt-1 px-3 py-2 text-sm border border-input rounded-lg bg-background outline-none focus:ring-2 focus:ring-primary/30">
+                      <option value="municipality">{lang === 'np' ? 'नगरपालिका आपूर्ति' : 'Municipality Supply'}</option>
+                      <option value="well">{lang === 'np' ? 'इनार/भूमिगत' : 'Well/Groundwater'}</option>
+                      <option value="bottled">{lang === 'np' ? 'बोतल पानी' : 'Bottled Water'}</option>
+                    </select>
+                  </div>
+                  <div>
+                    <Label className="text-xs">{lang === 'np' ? 'विद्यालय दिन' : 'School days per month'}</Label>
+                    <input type="number" min={1} value={answers.schoolDays} onChange={sel('schoolDays')} className="w-full mt-1 px-3 py-2 text-sm border border-input rounded-lg bg-background outline-none focus:ring-2 focus:ring-primary/30" />
+                  </div>
+                  <div>
+                    <Label className="text-xs">{lang === 'np' ? 'विद्यालय बगैँचा छ?' : 'Has garden?'}</Label>
+                    <div className="mt-2 flex items-center gap-2">
+                      <input type="checkbox" id="garden" checked={answers.hasGarden} onChange={sel('hasGarden')} className="w-4 h-4 accent-primary" />
+                      <Label htmlFor="garden" className="text-xs cursor-pointer">{lang === 'np' ? 'हो' : 'Yes'}</Label>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div className="flex items-center justify-between gap-3 pt-1">
+                <Button type="button" variant="outline" onClick={() => setStepIndex(index => Math.max(index - 1, 0))} disabled={stepIndex === 0}>
+                  {lang === 'np' ? 'पछाडि' : 'Back'}
+                </Button>
+                <Button type="button" className="gap-2" onClick={nextStep}>
+                  {isFinalStep ? <><Brain className="w-4 h-4" />{lang === 'np' ? 'के म गणना गर्न सक्छु?' : 'Can I calculate?'}</> : <>{lang === 'np' ? 'अर्को प्रश्न' : 'Next question'}<ChevronRight className="w-4 h-4" /></>}
+                </Button>
+              </div>
+              {isFinalStep && !showResults && (
+                <p className="text-xs text-muted-foreground">
+                  {lang === 'np' ? 'सबै इनपुट तयार भएपछि गणना गर्न माथिको बटन थिच्नुहोस्।' : 'Once the inputs are ready, use the button above to calculate.'}
+                </p>
               )}
             </div>
           </div>
 
-          {/* Q5 - Waste & Water */}
-          <div className="bg-card border border-border rounded-2xl p-4 space-y-3">
-            <h3 className="text-sm font-semibold text-foreground">
-              {lang === 'np' ? '५. फोहोर र पानी' : '5. Waste & Water'}
-            </h3>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label className="text-xs">{lang === 'np' ? 'फोहोर व्यवस्थापन' : 'Waste Management'}</Label>
-                <select value={answers.wasteManagement} onChange={sel('wasteManagement')} className="w-full mt-1 px-3 py-2 text-sm border border-input rounded-lg bg-background outline-none focus:ring-2 focus:ring-primary/30">
-                  <option value="landfill">{lang === 'np' ? 'मिश्रित ल्यान्डफिल' : 'Mixed Landfill'}</option>
-                  <option value="segregated">{lang === 'np' ? 'पृथकीकृत संकलन' : 'Segregated Collection'}</option>
-                  <option value="compost">{lang === 'np' ? 'कम्पोस्ट + पुनःचक्रण' : 'Compost + Recycling'}</option>
-                </select>
+          <div className="space-y-4">
+            <div className="bg-card border border-border rounded-2xl p-4 shadow-sm">
+              <div className="flex items-center gap-2 mb-3">
+                <MessageCircle className="w-4 h-4 text-primary" />
+                <h3 className="text-sm font-semibold text-foreground">{lang === 'np' ? 'च्याट प्रगति' : 'Chat progress'}</h3>
               </div>
-              <div>
-                <Label className="text-xs">{lang === 'np' ? 'पानीको स्रोत' : 'Water Source'}</Label>
-                <select value={answers.waterSource} onChange={sel('waterSource')} className="w-full mt-1 px-3 py-2 text-sm border border-input rounded-lg bg-background outline-none focus:ring-2 focus:ring-primary/30">
-                  <option value="municipality">{lang === 'np' ? 'नगरपालिका आपूर्ति' : 'Municipality Supply'}</option>
-                  <option value="well">{lang === 'np' ? 'इनार/भूमिगत' : 'Well/Groundwater'}</option>
-                  <option value="bottled">{lang === 'np' ? 'बोतल पानी' : 'Bottled Water'}</option>
-                </select>
+              <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+                {chatMessages.map((message, index) => (
+                  <div key={index} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm leading-relaxed ${message.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'}`}>
+                      {message.text}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 space-y-3">
+                <form
+                  className="flex gap-2"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    sendChat(chatInput);
+                  }}
+                >
+                  <input
+                    value={chatInput}
+                    onChange={e => setChatInput(e.target.value)}
+                    placeholder={isFinalStep ? (lang === 'np' ? 'जस्तै: के म गणना गर्न सक्छु?' : 'For example: Can I calculate?') : currentStep?.prompt}
+                    className="flex-1 min-w-0 rounded-xl border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-primary/30"
+                  />
+                  <Button type="submit" className="shrink-0 gap-2">
+                    <Send className="w-4 h-4" />
+                    {lang === 'np' ? 'पठाउनुहोस्' : 'Send'}
+                  </Button>
+                </form>
+                {!showResults && (
+                  <Button className="w-full h-11 text-base font-semibold" onClick={isFinalStep ? () => sendChat(lang === 'np' ? 'के म गणना गर्न सक्छु?' : 'Can I calculate?') : nextStep}>
+                    <Brain className="w-4 h-4 mr-2" />
+                    {isFinalStep ? (lang === 'np' ? 'अब गणना गर्नुहोस्' : 'Calculate now') : (lang === 'np' ? 'अन्तिम चरणमा जानुहोस्' : 'Continue to final step')}
+                  </Button>
+                )}
               </div>
             </div>
           </div>
-
-          <Button className="w-full h-11 text-base font-semibold" onClick={() => setShowResults(true)}>
-            <Brain className="w-4 h-4 mr-2" />
-            {lang === 'np' ? 'कार्बन फुटप्रिन्ट गणना गर्नुहोस्' : 'Calculate Carbon Footprint'}
-          </Button>
         </div>
 
         {/* Results */}
